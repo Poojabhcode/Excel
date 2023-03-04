@@ -32,7 +32,55 @@ formulaInput.addEventListener("keydown", function (e) {
       removeFromDownstream(upstream[k], selectedCellAdd);
     }
 
-    currCellObj.upstream = [];
+    cellObj.upstream = [];
+
+    let formulaArr = typedFormula.split(" ");
+    let cellsInFormula = [];
+
+    for (let i = 0; i < formulaArr.length; i++) {
+      if (
+        formulaArr[i] != "+" &&
+        formulaArr[i] != "-" &&
+        formulaArr[i] != "*" &&
+        formulaArr[i] != "/" &&
+        isNaN(formulaArr[i])
+      ) {
+        cellsInFormula.push(formulaArr[i]);
+      }
+    }
+
+    for (let i = 0; i < cellsInFormula.length; i++) {
+      addToDownstream(cellsInFormula[i], selectedCellAdd);
+    }
+    cellObj.upstream = cellsInFormula; //[A1, B1]
+
+    let valObj = {};
+
+    for (let i = 0; i < cellsInFormula.length; i++) {
+      let cellValue = dataObj[cellsInFormula[i]].value;
+
+      valObj[cellsInFormula[i]] = cellValue;
+    }
+
+    for (let key in valObj) {
+      typedFormula = typedFormula.replace(key, valObj[key]);
+    }
+
+    let newValue = eval(typedFormula);
+
+    lastCell.innerText = newValue;
+
+    cellObj.value = newValue;
+
+    let downstream = cellObj.downstream;
+
+    for (let i = 0; i < downstream.length; i++) {
+      updateCell(downstream[i]);
+    }
+
+    dataObj[selectedCellAdd] = cellObj;
+
+    formulaInput.value = "";
   }
 });
 
@@ -75,6 +123,9 @@ for (let i = 1; i <= 100; i++) {
       formula: undefined,
       upstream: [],
       downstream: [],
+      align: "left",
+      color: "black",
+      bgColor: "white",
     };
 
     let cellDiv = document.createElement("div");
@@ -137,17 +188,16 @@ for (let i = 1; i <= 100; i++) {
   cellSection.append(rowDiv);
 }
 
-dataObj["A1"].value = 20;
-dataObj["A1"].downstream = ["B1"];
-dataObj["B1"].formula = "2 * A1";
-dataObj["B1"].upstream = ["A1"];
-dataObj["B1"].value = 40;
+if (localStorage.getItem("sheet")) {
+  console.log(1);
+  dataObj = JSON.parse(localStorage.getItem("sheet"));
 
-let a1cell = document.querySelector("[data-address='A1']");
-let b1cell = document.querySelector("[data-address='B1']");
-
-a1cell.innerText = 20;
-b1cell.innerText = 40;
+  for (let x in dataObj) {
+    let cell = document.querySelector(`[data-address='${x}']`);
+    if (dataObj[x].value) cell.innerText = dataObj[x].value;
+    // dataObj[x]
+  }
+}
 
 // C1 = Formula(2*A1)
 // A1 = parent
@@ -197,16 +247,22 @@ function updateCell(cell) {
     valObj[upstream[i]] = cellValue;
   }
 
-  //a1 + b1
+    //we will loop through valObj and replace the cellAddress with their value
+    //before A1+B2;
+    //after 20+30
+    // console.log("valocj"+valObj);
+
+   //a1 + b1
 
   for (let key in valObj) {
     formula = formula.replace(key, valObj[key]);
   }
-
-  //20 + 10
-
+   
+    //20+10
+    //it will calulate mathmatical values of that formula
   let newValue = eval(formula);
-
+  
+  //setting new calculated value by formula to its value attribute
   let cellOnUi = document.querySelector(`[data-address='${cell}']`);
   cellOnUi.innerText = newValue;
 
@@ -218,3 +274,10 @@ function updateCell(cell) {
     updateCell(downstream[i]);
   }
 }
+
+function addToDownstream(parent, child) {
+  // child ko parent ki downstream me add krna hai
+
+  dataObj[parent].downstream.push(child);
+}
+
